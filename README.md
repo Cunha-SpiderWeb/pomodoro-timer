@@ -2,10 +2,6 @@
 
 基于 Python + tkinter 的桌面番茄钟应用，支持窗口置顶、系统托盘和原生通知。
 
-## 截图
-
-![screenshot](https://img.shields.io/badge/status-working-brightgreen)
-
 ## 功能
 
 - **三种模式**：专注 25 分钟 / 小憩 5 分钟 / 长休 15 分钟
