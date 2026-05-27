@@ -1,0 +1,46 @@
+# 🍅 番茄钟 - Pomodoro Timer
+
+基于 Python + tkinter 的桌面番茄钟应用，支持窗口置顶、系统托盘和原生通知。
+
+## 截图
+
+![screenshot](https://img.shields.io/badge/status-working-brightgreen)
+
+## 功能
+
+- **三种模式**：专注 25 分钟 / 小憩 5 分钟 / 长休 15 分钟
+- **环形进度条**：实时显示剩余时间
+- **每 4 轮自动长休**：底部圆点记录当前周期
+- **窗口置顶**：默认开启，可随时开关
+- **系统托盘**：关闭窗口自动最小化到托盘，后台继续计时
+- **原生通知**：每个阶段结束时弹出 Windows 通知
+- **键盘快捷键**：全程无需鼠标
+
+## 安装
+
+```bash
+pip install -r requirements.txt
+```
+
+## 运行
+
+```bash
+python pomodoro.py
+```
+
+## 快捷键
+
+| 快捷键 | 操作 |
+|--------|------|
+| `空格` | 开始 / 暂停 |
+| `1` | 切换到专注模式 |
+| `2` | 切换到小憩模式 |
+| `3` | 切换到长休模式 |
+| `R` | 重置当前计时 |
+| `→` | 跳过当前阶段 |
+
+## 依赖
+
+- Python 3.10+
+- [pillow](https://pypi.org/project/Pillow/) — 托盘图标绘制
+- [pystray](https://pypi.org/project/pystray/) — 系统托盘支持
