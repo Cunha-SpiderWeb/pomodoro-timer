@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import math
 import time
 import threading
@@ -80,29 +80,12 @@ class PomodoroApp:
         main = tk.Frame(self.root, bg=COLORS['bg'])
         main.pack(fill='both', expand=True, padx=30, pady=25)
 
-        # Title
-        tk.Label(main, text='番茄钟', font=('Segoe UI', 11, 'bold'),
-                 fg=COLORS['muted'], bg=COLORS['bg']).pack(pady=(0, 18))
-
-        # Mode tabs
-        tab_frame = tk.Frame(main, bg=COLORS['ring_bg'])
-        tab_frame.pack(fill='x', pady=(0, 24))
-
-        self.tab_btns = {}
-        for key, label in [('work', '专注'), ('short_break', '小憩'), ('long_break', '长休')]:
-            btn = tk.Button(
-                tab_frame, text=label,
-                font=('Segoe UI', 9, 'bold'),
-                fg=COLORS['muted'], bg=COLORS['ring_bg'],
-                activebackground=COLORS['btn_hover'],
-                activeforeground=COLORS['text'],
-                relief='flat', borderwidth=0,
-                cursor='hand2',
-                command=lambda k=key: self._set_mode(k),
-            )
-            btn.pack(side='left', fill='x', expand=True, padx=2, pady=2)
-            self.tab_btns[key] = btn
-        self._highlight_tab()
+        # Mode label (clickable to cycle)
+        self.mode_label = tk.Label(main, text='专注', font=('Segoe UI', 14, 'bold'),
+                                 fg=COLORS['work'], bg=COLORS['bg'],
+                                 cursor='hand2')
+        self.mode_label.pack(pady=(0, 18))
+        self.mode_label.bind('<Button-1>', lambda e: self._cycle_mode())
 
         # Canvas ring
         self.canvas_size = 250
@@ -133,7 +116,7 @@ class PomodoroApp:
         ctrl = tk.Frame(main, bg=COLORS['bg'])
         ctrl.pack(pady=(0, 16))
 
-        self._make_icon_btn(ctrl, '↻', self._reset, 38).pack(side='left', padx=8)
+        self._make_icon_btn(ctrl, '↻', self._reset).pack(side='left', padx=8)
 
         self.play_btn = tk.Button(
             ctrl, text='▶', font=('', 20),
@@ -147,7 +130,7 @@ class PomodoroApp:
         )
         self.play_btn.pack(side='left', padx=8)
 
-        self._make_icon_btn(ctrl, '⏭', self._skip, 38).pack(side='left', padx=8)
+        self._make_icon_btn(ctrl, '⏭', self._skip).pack(side='left', padx=8)
 
         # Session dots
         dot_frame = tk.Frame(main, bg=COLORS['bg'])
@@ -181,9 +164,19 @@ class PomodoroApp:
         tk.Label(
             bottom, text='空格 开始/暂停 · 1/2/3 切换模式 · R 重置',
             font=('Segoe UI', 8), fg=COLORS['muted'], bg=COLORS['bg'],
+        ).pack(side='left', padx=(0, 10))
+
+        tk.Button(
+            bottom, text='退出', font=('Segoe UI', 8),
+            fg=COLORS['muted'], bg=COLORS['btn_bg'],
+            activebackground=COLORS['btn_hover'],
+            activeforeground='#ff6b6b',
+            relief='flat', borderwidth=0,
+            cursor='hand2',
+            command=self._quit_app,
         ).pack(side='right')
 
-    def _make_icon_btn(self, parent, text, cmd, size):
+    def _make_icon_btn(self, parent, text, cmd):
         return tk.Button(
             parent, text=text, font=('', 16),
             fg=COLORS['muted'], bg=COLORS['btn_bg'],
@@ -258,6 +251,9 @@ class PomodoroApp:
         self._update_tray_title()
 
     def _toggle(self):
+        self.root.after(0, self._do_toggle)
+
+    def _do_toggle(self):
         if self.running:
             self._pause()
         else:
@@ -292,8 +288,8 @@ class PomodoroApp:
         self._update_display()
 
     def _skip(self):
-        self._pause()
         self._finish_session()
+        self._start()
 
     def _finish_session(self):
         self._pause()
@@ -309,8 +305,6 @@ class PomodoroApp:
         else:
             self._set_mode('work')
 
-        self._start()
-
     # ── Mode Switching ─────────────────────────────
 
     def _set_mode(self, mode):
@@ -323,19 +317,20 @@ class PomodoroApp:
         else:
             self.total_time = LONG_BREAK
         self.time_left = self.total_time
-        self._highlight_tab()
+        self._update_mode_label()
         self._update_display()
 
-    def _highlight_tab(self):
-        for key, btn in self.tab_btns.items():
-            if key == self.mode:
-                color = {'work': COLORS['work'],
-                         'short_break': COLORS['short_break'],
-                         'long_break': COLORS['long_break']}[key]
-                btn.config(bg=color, fg='white', activebackground=color)
-            else:
-                btn.config(bg=COLORS['ring_bg'], fg=COLORS['muted'],
-                           activebackground=COLORS['btn_hover'])
+    def _cycle_mode(self):
+        order = ['work', 'short_break', 'long_break']
+        idx = order.index(self.mode)
+        self._set_mode(order[(idx + 1) % 3])
+
+    def _update_mode_label(self):
+        colors = {'work': COLORS['work'],
+                  'short_break': COLORS['short_break'],
+                  'long_break': COLORS['long_break']}
+        texts = {'work': '专注', 'short_break': '小憩', 'long_break': '长休'}
+        self.mode_label.config(text=texts[self.mode], fg=colors[self.mode])
 
     # ── Session Dots ───────────────────────────────
 
@@ -357,14 +352,11 @@ class PomodoroApp:
     # ── Notification ───────────────────────────────
 
     def _notify(self):
-        if self.tray_icon:
-            if self.mode == 'work':
-                msg = '专注完成！休息一下吧 🍅'
-            elif self.mode == 'short_break':
-                msg = '休息结束，开始新的专注吧 💪'
-            else:
-                msg = '长休结束，开始新的专注吧 💪'
-            self.tray_icon.notify(msg, title='番茄钟')
+        msg = {'work': '专注完成！休息一下吧',
+               'short_break': '休息结束，开始新的专注吧',
+               'long_break': '长休结束，开始新的专注吧'}.get(self.mode, '')
+        self.status_label.config(text=msg)
+        self.root.update_idletasks()
 
     # ── System Tray ────────────────────────────────
 
@@ -414,7 +406,10 @@ class PomodoroApp:
         self.root.focus_force()
 
     def _on_close(self):
-        self.root.withdraw()  # minimize to tray instead of closing
+        if messagebox.askokcancel('退出番茄钟', '退出应用还是最小化到托盘？\n\n按"确定"退出，按"取消"最小化到托盘。', parent=self.root):
+            self._quit_app()
+        else:
+            self.root.withdraw()
 
     def _quit_app(self):
         self.running = False
